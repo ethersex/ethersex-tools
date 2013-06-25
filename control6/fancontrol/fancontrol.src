@@ -1,0 +1,60 @@
+dnl ################################################################################
+dnl #                                                                              #
+dnl #  Copyright (c) 2011 by Maximilian Güntner <maximilian.guentner@gmail.com>    #
+dnl #                                                                              #
+dnl # This program is free software; you can redistribute it and/or modify it      #
+dnl # under the terms of the GNU General Public License (either version 2 or       #
+dnl # version 3) as published by the Free Software Foundation.                     #
+dnl #                                                                              #
+dnl # This program is distributed in the hope that it will be useful,              #
+dnl # but WITHOUT ANY WARRANTY; without even the implied warranty of               #
+dnl # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                #
+dnl # GNU General Public License for more details.                                 #
+dnl #                                                                              #
+dnl # You should have received a copy of the GNU General Public License            #
+dnl # along with this program; if not, write to the Free Software                  #
+dnl # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.                    #
+dnl #                                                                              #
+dnl # For more information on the GPL, please go to:                               #
+dnl # http://www.gnu.org/copyleft/gpl.html                                         #
+dnl #                                                                              #
+dnl ################################################################################
+CONTROL_START
+THREAD(mainloop)
+	ON ONCE (1) DO
+		dnl 0.425: x/600*255 (60° will result in 255 => maximum fan speed)
+		int16_t temperature = 0x7FFF;
+		for(uint8_t i=0;i<10;i++)
+		{
+			temperature = (ONEWIRE_GET(28a419e002000017));
+			if(temperature != 0x7FFF)
+				break;
+		}
+		ONEWIRE_CONVERT();
+		double newvalue=0.425*temperature;
+		dnl Set fan to maximum
+		if (newvalue > 255)
+			OCR2A = 0;
+		dnl Disable the fan, cooling makes no sense
+		else if(newvalue < 120)
+			OCR2A = 255;
+		dnl Set the fan to the dynamic value
+		else
+			OCR2A = 255-(uint8_t) newvalue;
+	END
+THREAD_END(mainloop)
+
+ON STARTUP DO
+	dnl PD7 has to be output
+	DDRD |= 0b10000000;
+	dnl FastPWM
+	TCCR2A = (1 << COM2A1) | (1 << COM2A0) | (1 << WGM21) | (1 << WGM20);
+	dnl Prescaler: 1024
+	TCCR2B = (1 << CS22) | (1 << CS21) | (1 << CS20);
+	dnl Maximum Speed
+	OCR2A = 0;
+	TIMSK2 = 0; 
+        THREAD_START(mainloop)
+END
+CONTROL_END
+
