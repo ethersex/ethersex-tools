@@ -9,8 +9,8 @@ my $soap = SOAP::Lite
 
 my $whm = $soap->whm();
 
-print "Aktuelle Uptime des Ethersex: ", $whm, "\n";
+print "Uptime of the device: ", $whm, "\n";
  
 my $time = $soap->time();
 
-print "Aktuelle Systemzeit (Unix-Timestamp): ", $time, "\n";
+print "System time of the device in seconds since 1.1.1970: ", $time, "\n";
